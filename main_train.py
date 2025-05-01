@@ -7,7 +7,7 @@ from models import cloud_net
 from generators import get_train_val_generators
 from losses import dice_loss
 
-# GPU growth config (Optional but helps avoid CUDNN errors)
+# Enable memory growth for GPU
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -19,34 +19,32 @@ if gpus:
 # Parameters
 BATCH_SIZE = 4
 EPOCHS = 50
-INPUT_SHAPE = (256, 256, 3)  # Resize your 930x930 RGB images to this
+INPUT_SHAPE = (256, 256, 3)  # Resize as needed
 
-# Paths
-train_csv = 'data/train.csv'
-val_csv = 'data/val.csv'
-train_img_dir = 'data/train_images'
-val_img_dir = 'data/val_images'
+# Directories
+image_dir = 'Train/images'
+mask_dir = 'Train/masks'
 checkpoint_dir = 'checkpoints'
 os.makedirs(checkpoint_dir, exist_ok=True)
 
 # Load data generators
 train_gen, val_gen, steps_per_epoch, val_steps = get_train_val_generators(
-    train_csv, val_csv, train_img_dir, val_img_dir, BATCH_SIZE, INPUT_SHAPE
+    image_dir, mask_dir, BATCH_SIZE, INPUT_SHAPE
 )
 
-# Model
+# Build model
 model = cloud_net(INPUT_SHAPE)
 model.compile(optimizer=Adam(learning_rate=1e-4), loss=dice_loss, metrics=['accuracy'])
 
-# Checkpoint
+# Save best model
 checkpoint = ModelCheckpoint(
     filepath=os.path.join(checkpoint_dir, 'best_model.h5'),
-    save_best_only=True,
     monitor='val_loss',
+    save_best_only=True,
     mode='min'
 )
 
-# Train
+# Train the model
 model.fit(
     train_gen,
     validation_data=val_gen,
